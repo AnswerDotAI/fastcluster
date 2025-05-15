@@ -3,7 +3,7 @@ name = "fastkmeans"
 version = "0.5.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = ["torch", "numpy"]
 authors = [
   {name = "Ben Clavié", email = "bc@answer.ai" },
@@ -17,3 +17,20 @@ license = {text = "Apache-2.0"}
 
 [tool.setuptools]
 packages = ["fastkmeans"]
+
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-autoapi>=0.4.1",
+    "mkdocs-material>=9.6.12",
+    "mkdocstrings[python]>=0.26.1",
+    "pymdown-extensions>=10.15",
+]
+
+[project.optional-dependencies]
+bench = [
+    "matplotlib>=3.7.5",
+    "scikit-learn>=1.3.2",
+    "seaborn>=0.13.2",
+    "typer>=0.15.3",
+]

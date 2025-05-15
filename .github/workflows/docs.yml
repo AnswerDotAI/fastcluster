@@ -1,0 +1,35 @@
+name: Build Documentation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write # Required to push to gh-pages branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.3" # Pin for reproducibility
+          python-version: '3.12'
+
+      - name: Install fastkmeans dependencies
+        run: uv sync --extras docs --dev
+
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+        shell: bash
+
+      - name: Deploy documentation to GitHub Pages
+        run: mkdocs gh-deploy --force --clean

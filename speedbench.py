@@ -1,5 +1,3 @@
-# faiss
-import faiss
 # sys
 import time
 import math
@@ -12,22 +10,27 @@ import typer
 from typer import Option, Typer
 import numpy as np
 
-# sklearn
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 from sklearn.cluster import KMeans as SklearnKMeans
+
+# faiss
+try:
+    import faiss
+    FAISS = True
+except ImportError:
+    FAISS = False
 
 # plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # fast-pytorch-kmeans
-import importlib.util
-fast_pytorch_kmeans_available = importlib.util.find_spec("fast_pytorch_kmeans") is not None
-if fast_pytorch_kmeans_available and torch.cuda.is_available():
+try:
     from fast_pytorch_kmeans import KMeans
-else:
-    print("No GPU available or fast_pytorch_kmeans not installed, skipping fast-pytorch-kmeans...")
+    FAST_PYTORCH_KMEANS = torch.cuda.is_available()
+except ImportError:
+    FAST_PYTORCH_KMEANS = False
 
 # ~us~
 import fastkmeans
@@ -374,7 +377,7 @@ def main(
 
         X, y = generate_synthetic_data(n_samples, n_clusters, n_features, seed, random_clusters)
 
-        if do_faiss:
+        if do_faiss and FAISS:
             _, labels_faiss, time_faiss = run_faiss_kmeans(
                 X, n_clusters, max_iters, seed,
                 max_points_per_centroid=max_points_per_centroid,
@@ -426,7 +429,7 @@ def main(
         else:
             results.pop('FastKMeans_triton', None)
 
-        if do_pytorch_fast_kmeans and fast_pytorch_kmeans_available and torch.cuda.is_available():
+        if do_pytorch_fast_kmeans and FAST_PYTORCH_KMEANS:
             try:
                 _, labels_fast_pytorch_kmeans, time_fast_pytorch = run_fast_pytorch_kmeans(
                     X, n_clusters, max_iters, seed, verbose=verbose, do_evals=do_evals
