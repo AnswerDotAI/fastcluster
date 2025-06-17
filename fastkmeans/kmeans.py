@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import warnings
 
 import torch
 import numpy as np
@@ -46,9 +47,9 @@ def _kmeans_torch_double_chunked(
     dtype: torch.dtype | None = None,
     max_iters: int = 25,
     tol: float = 1e-8,
-    chunk_size_data: int = 50_000,
-    chunk_size_centroids: int = 10_000,
-    max_points_per_centroid: int = 256,
+    chunk_size_data: int = 51_200,
+    chunk_size_centroids: int = 10_240,
+    max_points_per_centroid: int | None = 256,
     verbose: bool = False,
     use_triton: bool | None = None,
 ):
@@ -74,6 +75,7 @@ def _kmeans_torch_double_chunked(
 
     if max_points_per_centroid is not None and n_samples > k * max_points_per_centroid:
         target_n_samples = k * max_points_per_centroid
+        warnings.warn(f"Subsampling data from {n_samples:,} to {target_n_samples:,}. Set max_points_per_centroid to None to disable.")  # fmt: skip
         perm = torch.randperm(n_samples, device=data.device)
         indices = perm[:target_n_samples]
         data = data[indices]
@@ -156,9 +158,7 @@ def _kmeans_torch_double_chunked(
 
         iteration_time = time.time() - iteration_start_time
         if verbose:
-            print(
-                f"Iteration {iteration + 1}/{max_iters} took {iteration_time:.4f}s, total time: {time.time() - iteration_start_time + iteration_time:.4f}s, shift: {shift:.6f}"
-            )
+            print(f"Iteration {iteration + 1}/{max_iters} took {iteration_time:.4f}s, total time: {time.time() - iteration_start_time + iteration_time:.4f}s, shift: {shift:.6f}")  # fmt: skip
 
         if shift < tol:
             if verbose:
@@ -180,24 +180,34 @@ class FastKMeans:
         Dimensionality of the input features (n_features).
     k  : int
         Number of clusters.
-    niter : int, default=20
+    niter : int, default=25
         Maximum number of iterations.
-    tol : float, default=1e-4
+    tol : float, default=1e-8
         Stopping threshold for centroid movement.
     gpu : bool, default=True
         Whether to force GPU usage if available. If False, CPU is used.
     seed : int, default=0
         Random seed for centroid initialization and (if needed) subsampling.
-    max_points_per_centroid : int, optional, default=1_000_000_000
+    max_points_per_centroid : int, optional, default=256
         If n_samples > k * max_points_per_centroid, the data will be subsampled to exactly
-        k * max_points_per_centroid points before clustering.
-    chunk_size_data : int, default=10,2400
+        k * max_points_per_centroid points before clustering. Defaults to FAISS' 256.
+    chunk_size_data : int, default=51,200
         Chunk size along the data dimension for assignment/update steps.
     chunk_size_centroids : int, default=10,240
         Chunk size along the centroid dimension for assignment/update steps.
+    device : str | int | torch.device | None, default=None
+        Device to run fastkmeans on. Defaults to GPU:0 if `gpu=True`, otherwise CPU.
+    dtype : torch.dtype, default=None
+        Data type to use for the algorithm.
+    pin_gpu_memory : bool, default=True
+        Pin GPU memory for faster transfers.
+    verbose : bool, default=False
+        Print verbose output.
+    nredo : int, default=1
+        For FAISS compatibility, it is currently not used and must be 1.
     use_triton : bool | None, default=None
-       Use the fast Triton backend for the assignment/update steps.
-       If None, the Triton backend will be enabled for modern GPUs.
+        Use the fast Triton backend for the assignment/update steps.
+        If None, the Triton backend will be enabled for modern GPUs.
     """
 
     def __init__(
@@ -208,7 +218,7 @@ class FastKMeans:
         tol: float = 1e-8,
         gpu: bool = True,
         seed: int = 0,
-        max_points_per_centroid: int = 1_000_000_000,
+        max_points_per_centroid: int | None = 256,
         chunk_size_data: int = 51_200,
         chunk_size_centroids: int = 10_240,
         device: str | int | torch.device | None = None,

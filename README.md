@@ -50,17 +50,13 @@ The main motivation behind `fastkmeans` is having a considerably easier way to p
 
 There are some libraries (such as NVidia's own implementations), but they again require more dependencies than we'd like for nimble packaging, and/or are less flexible in terms of hardware.
 
-###  Limitations
-
-- On a few toy datasets & MNIST, `fastkmeans` reaches roughly the same NMI as `faiss` and `scikit-learn`, indicating that it creates at least somewhat coherent clusters. However, it's not extensively tested, especially in non-ColBERT uses, so your mileage may vary.
-- The "chunking" defaults to avoid OOMs is rather simplistic, and you might need to tweak the numbers depending on your hardware and dataset size.
-- The library currently assumes you'll be using it either on a CPU or a single GPU. Multiple GPUs don't currently provide a major speed-up, this might change in the future, though we expect users wanting to index 10M+ documents to likely have the more robust `faiss` available on their machine anyway.
-
 ### Triton Kernel
 
 `fastkmeans`'s Triton kmeans kernel is ~4-5 times faster than single-GPU `faiss` or `fastkmeans`'s PyTorch backend. On a modern GPU (Ampere or newer), the Triton backend is enabled by default.
 
 While the Triton kernel uses significantly less memory than the PyTorch implementation, increasing the chunk size above 512K can result in slower performance.
+
+> Note: Use PyTorch 2.7.1 or newer if using the Triton backend on AMD or Intel GPUs.
 
 ### Speed
 
@@ -84,6 +80,23 @@ Then, run the benchmark script:
 CUDA_VISIBLE_DEVICES=0 python speedbench.py --do-faiss --do-fastkmeans --do-fastkmeans-triton --do-evals
 ```
 
+If you don't need to benchmark faiss or do not have a Nvidia GPU, you can install `fastkmeans` with the minimalbenchmark dependencies:
+
+```bash
+[uv] pip install fastkmeans[bench]
+```
+and run the benchmark script:
+
+```bash
+python speedbench.py --do-fastkmeans  --do-evals
+```
+
+###  Limitations
+
+- On a few toy datasets & MNIST, `fastkmeans` reaches roughly the same NMI as `faiss` and `scikit-learn`, indicating that it creates at least somewhat coherent clusters. However, it's not extensively tested, especially in non-ColBERT uses, so your mileage may vary.
+- The "chunking" defaults to avoid OOMs is rather simplistic, and you might need to tweak the numbers depending on your hardware and dataset size.
+- The library currently assumes you'll be using it either on a CPU or a single GPU. Multiple GPUs don't currently provide a major speed-up, this might change in the future, though we expect users wanting to index 10M+ documents to likely have the more robust `faiss` available on their machine anyway.
+
 ### Citation
 
 If you use fastmeans and want to/need to cite it in your work, please feel free to use the citation below:
@@ -95,3 +108,4 @@ If you use fastmeans and want to/need to cite it in your work, please feel free 
   year = {2025},
   howpublished = {\url{https://github.com/AnswerDotAI/fastkmeans/}}
 }
+```

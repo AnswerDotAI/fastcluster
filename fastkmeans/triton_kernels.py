@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import nullcontext
 
 import torch
 import triton
 import triton.language as tl
 
 
-@contextmanager
 def device_guard(tensor: torch.Tensor):
-    """Context manager to ensure that the Triton kernel launches on the correct device."""
-    if tensor.device.type == "cuda":  # NVIDIA or AMD/ROCm
-        with torch.cuda.device_of(tensor):
-            yield
-    elif tensor.device.type == "xpu":  # Intel GPUs
-        with torch.xpu.device_of(tensor):
-            yield
+    """Returns context manager to ensure that the Triton kernel launches on the correct device."""
+    if tensor.is_cuda:  # NVIDIA or AMD/ROCm
+        return torch.cuda.device_of(tensor)
+    elif hasattr(tensor, "is_xpu") and tensor.is_xpu:  # Intel GPUs
+        return torch.xpu.device_of(tensor)
     else:  # CPU or other back-ends
-        yield
+        return nullcontext()
 
 
 @triton.heuristics(
@@ -92,6 +89,9 @@ def _kmeans_kernel(
 
     # finish distance formula
     dist = tl.fma(dot_acc, -2.0, x_n[:, None] + c_n[None, :])  # [BM, BN]
+
+    # set large value for invalid distances
+    dist = tl.where(col_mask[None, :], dist, 1e38)
 
     # local arg‑min (inside this tile)
     tile_min, tile_idx = tl.min(dist, axis=1, return_indices=True)

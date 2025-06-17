@@ -1,0 +1,29 @@
+site_name: FastKMeans
+
+theme:
+  name: material
+  palette:
+    primary: deep orange
+
+markdown_extensions:
+- pymdownx.snippets:
+    base_path: !relative $config_dir
+
+plugins:
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          docstring_style: numpy
+          show_root_heading: true
+          show_root_full_path: false
+          show_source: false
+
+nav:
+  - Home: index.md
+  - API: api.md
+
+
+validation:
+  links:
+    absolute_links: relative_to_docs
