@@ -93,6 +93,9 @@ def _kmeans_kernel(
     # finish distance formula
     dist = tl.fma(dot_acc, -2.0, x_n[:, None] + c_n[None, :])  # [BM, BN]
 
+    # set large value for invalid distances
+    dist = tl.where(col_mask[None, :], dist, 1e38)
+
     # local arg‑min (inside this tile)
     tile_min, tile_idx = tl.min(dist, axis=1, return_indices=True)
 
